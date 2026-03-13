@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>送给最爱的你</title>
+    <meta name="description" content="一份特别的礼物，送给最特别的你">
+    <meta property="og:title" content="送给最爱的你">
+    <meta property="og:description" content="一份特别的礼物，送给最特别的你">
+    <meta property="og:image" content="assets/thumbnail.jpg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #0a0a1a 0%, #1a0a2e 50%, #0d0d1a 100%);
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        /* 星空背景 */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        /* 开场动画遮罩 */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeOut 2s ease-in-out 1.5s forwards;
+        }
+        
+        .intro-text {
+            color: #ffb6c1;
+            font-size: 28px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+        
+        /* 主内容 */
+        .content-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            animation: showContent 1s ease-in-out 2s forwards;
+        }
+        
+        @keyframes showContent {
+            to { opacity: 1; }
+        }
+        
+        #heartCanvas {
+            display: block;
+            filter: drop-shadow(0 0 20px rgba(255, 182, 193, 0.5));
+        }
+        
+        /* 脉冲动画 */
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 20px rgba(255, 182, 193, 0.5);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 0 40px rgba(255, 182, 193, 0.8);
+            }
+        }
+        
+        /* 浮动动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景 -->
+    <div class="stars" id="stars"></div>
+    
+    <!-- 开场动画 -->
+    <div class="intro-overlay">
+        <div class="intro-text">
+            <div>准备了一份礼物</div>
+            <div style="font-size: 18px; margin-top: 10px; opacity: 0.8;">给你...</div>
+        </div>
+    </div>
+    
+    <!-- 主内容 -->
+    <div class="content-wrapper">
+        <canvas id="heartCanvas"></canvas>
+    </div>
+    
+    <script>
+        // 配置参数
+        const config = {
+            particleCount: 1800,
+            edgeParticleCount: 250,
+            particleSize: { min: 0.8, max: 2.5 },
+            color: { red: 255, green: 182, blue: 193, alpha: { min: 0.4, max: 0.9 } },
+            跳动速度: 0.004,
+            边缘飘散速度: 0.4,
+            爱心大小: 100,
+            内部分布范围: 75,
+            buttonText: "LOVE",
+            buttonColor: "#ffb6c1",
+            buttonFontSize: 26
+        };
+
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置画布大小
+        function resizeCanvas() {
+            canvas.width = Math.min(window.innerWidth, 600);
+            canvas.height = Math.min(window.innerHeight, 800);
+        }
+        resizeCanvas();
+        
+        // 粒子数组
+        const particles = [];
+        const edgeParticles = [];
+        let scale = 1, scaleSpeed = config.跳动速度, scaleDirection = 1;
+        let buttonBounds = { x: 0, y: 0, width: 0, height: 0 };
+        let buttonHover = false;
+        let buttonPulse = 0;
+        
+        // 生成星空背景
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+        createStars();
+        
+        // 生成爱心粒子
+        function generateHeartParticles() {
+            particles.length = 0;
+            for (let i = 0; i < config.particleCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = (1 - Math.pow(Math.random(), 2)) * config.内部分布范围 + 20;
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                const distance = Math.sqrt(x * x + y * y);
+                const size = config.particleSize.min + (1 - distance / 20) * (config.particleSize.max - config.particleSize.min);
+                const alpha = config.color.alpha.min + (1 - distance / 20) * (config.color.alpha.max - config.color.alpha.min);
+                
+                particles.push({
+                    x: canvas.width / 2 + x * r / 20,
+                    y: canvas.height / 2 + 80 + y * r / 20,
+                    vx: 0, vy: 0,
+                    size: size,
+                    alpha: alpha,
+                    baseX: canvas.width / 2 + x * r / 20,
+                    baseY: canvas.height / 2 + 80 + y * r / 20
+                });
+            }
+        }
+        
+        // 生成边缘粒子
+        function generateEdgeParticles() {
+            edgeParticles.length = 0;
+            for (let i = 0; i < config.edgeParticleCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = config.爱心大小;
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                
+                edgeParticles.push({
+                    x: canvas.width / 2 + x * r / 20,
+                    y: canvas.height / 2 + 80 + y * r / 20,
+                    vx: (Math.random() - 0.5) * config.边缘飘散速度,
+                    vy: (Math.random() - 0.5) * config.边缘飘散速度,
+                    size: Math.random() * 1.2 + 0.3,
+                    alpha: Math.random() * 0.4 + 0.2,
+                    offsetX: x * r / 20,
+                    offsetY: y * r / 20,
+                    life: Math.random() * 80 + 40
+                });
+            }
+        }
+        
+        // 绘制发光粒子
+        function drawGlowParticle(x, y, size, alpha) {
+            // 外发光
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+            gradient.addColorStop(0, `rgba(255, 182, 193, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(255, 150, 180, ${alpha * 0.5})`);
+            gradient.addColorStop(1, `rgba(255, 182, 193, 0)`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 核心
+            ctx.fillStyle = `rgba(255, 220, 230, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // 绘制按钮
+        function drawButton(centerX, centerY) {
+            ctx.font = `bold ${config.buttonFontSize}px 'Courier New', monospace`;
+            const textWidth = ctx.measureText(config.buttonText).width;
+            const paddingX = 40, paddingY = 15;
+            const buttonWidth = textWidth + paddingX * 2;
+            const buttonHeight = config.buttonFontSize + paddingY * 2;
+            const buttonX = centerX - buttonWidth / 2;
+            const buttonY = centerY - 160;
+            
+            buttonBounds = { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+            
+            // 脉冲效果
+            buttonPulse += 0.05;
+            const pulseScale = 1 + Math.sin(buttonPulse) * 0.03;
+            const glowIntensity = buttonHover ? 30 : 15 + Math.sin(buttonPulse) * 10;
+            
+            // 发光背景
+            const gradient = ctx.createRadialGradient(
+                centerX, buttonY + buttonHeight / 2, 0,
+                centerX, buttonY + buttonHeight / 2, buttonWidth * pulseScale
+            );
+            gradient.addColorStop(0, `rgba(255, 182, 193, ${buttonHover ? 0.3 : 0.15})`);
+            gradient.addColorStop(1, 'rgba(255, 182, 193, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(buttonX - 20, buttonY - 20, buttonWidth + 40, buttonHeight + 40);
+            
+            // 按钮背景
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.beginPath();
+            ctx.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 30);
+            ctx.fill();
+            
+            // 按钮边框发光
+            ctx.strokeStyle = config.buttonColor;
+            ctx.lineWidth = buttonHover ? 3 : 2;
+            ctx.shadowColor = config.buttonColor;
+            ctx.shadowBlur = glowIntensity;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // 文字
+            ctx.fillStyle = config.buttonColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(config.buttonText, centerX, buttonY + buttonHeight / 2);
+        }
+        
+        // 动画循环
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 更新缩放
+            scale += scaleSpeed * scaleDirection;
+            if (scale > 1.08) scaleDirection = -1;
+            else if (scale < 0.92) scaleDirection = 1;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // 绘制按钮
+            drawButton(centerX, centerY);
+            
+            // 绘制内部粒子
+            particles.forEach(p => {
+                const offsetX = p.baseX - centerX;
+                const offsetY = p.baseY - (centerY + 80);
+                const targetX = centerX + offsetX * scale;
+                const targetY = centerY + 80 + offsetY * scale;
+                
+                p.vx += (targetX - p.x) * 0.015;
+                p.vy += (targetY - p.y) * 0.015;
+                p.vx *= 0.94;
+                p.vy *= 0.94;
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                drawGlowParticle(p.x, p.y, p.size, p.alpha);
+            });
+            
+            // 绘制边缘粒子
+            edgeParticles.forEach(p => {
+                const targetX = centerX + p.offsetX * scale;
+                const targetY = centerY + 80 + p.offsetY * scale;
+                
+                p.vx += (targetX - p.x) * 0.02;
+                p.vy += (targetY - p.y) * 0.02;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                
+                drawGlowParticle(p.x, p.y, p.size, p.alpha * (p.life / 120));
+                
+                if (p.life <= 0) {
+                    const t = Math.random() * Math.PI * 2;
+                    const r = config.爱心大小;
+                    const x = 16 * Math.pow(Math.sin(t), 3);
+                    const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                    p.offsetX = x * r / 20;
+                    p.offsetY = y * r / 20;
+                    p.x = centerX + p.offsetX;
+                    p.y = centerY + 80 + p.offsetY;
+                    p.vx = (Math.random() - 0.5) * config.边缘飘散速度;
+                    p.vy = (Math.random() - 0.5) * config.边缘飘散速度;
+                    p.life = Math.random() * 80 + 40;
+                }
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // 事件处理
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            buttonHover = x >= buttonBounds.x && x <= buttonBounds.x + buttonBounds.width &&
+                         y >= buttonBounds.y && y <= buttonBounds.y + buttonBounds.height;
+            canvas.style.cursor = buttonHover ? 'pointer' : 'default';
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (x >= buttonBounds.x && x <= buttonBounds.x + buttonBounds.width &&
+                y >= buttonBounds.y && y <= buttonBounds.y + buttonBounds.height) {
+                window.location.href = 'second.html';
+            }
+        });
+        
+        // 触摸支持
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            if (x >= buttonBounds.x && x <= buttonBounds.x + buttonBounds.width &&
+                y >= buttonBounds.y && y <= buttonBounds.y + buttonBounds.height) {
+                window.location.href = 'second.html';
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            generateHeartParticles();
+            generateEdgeParticles();
+        });
+        
+        // 初始化
+        generateHeartParticles();
+        generateEdgeParticles();
+        animate();
+    </script>
+</body>
+</html>
